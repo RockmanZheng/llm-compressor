@@ -1,0 +1,34 @@
+# Custom FP8 Quantization Recipe
+# ================================
+# This recipe defines the quantization scheme for custom FP8 format (E5M2)
+
+quant_stage:
+  quant_modifiers:
+    QuantizationModifier:
+      # Layers to ignore during quantization
+      # These are typically embeddings, normalization layers, and output heads
+      ignore:
+        - LlamaRotaryEmbedding
+        - LlamaRMSNorm
+        - SiLU
+        - model.norm
+        - lm_head
+      
+      # Quantization scheme
+      scheme:
+        # Activation quantization
+        input_activations:
+          num_bits: 8
+          type: float
+          strategy: tensor
+          dynamic: true
+          symmetric: false
+          custom_format: e5m2  # Custom FP8 E5M2 format
+        
+        # Weight quantization
+        weights:
+          num_bits: 8
+          type: float
+          strategy: channel
+          symmetric: true
+          custom_format: e5m2  # Custom FP8 E5M2 format
