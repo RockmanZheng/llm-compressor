@@ -1,12 +1,9 @@
 """
-Custom FP8 Quantization Example - Simple PTQ Approach
+HiFloat8 Quantization Example - Simple PTQ Approach
 =====================================================
 
-This example demonstrates how to quantize a model using custom FP8 format
+This example demonstrates how to quantize a model using custom HiFloat8 format
 with the Python API (no YAML recipe required).
-
-Requirements:
-    pip install llmcompressor transformers torch
 
 Usage:
     python custom_fp8_example.py
@@ -14,28 +11,25 @@ Usage:
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
-# Note: llmcompressor imports will be available after installation
-# Uncomment these when llmcompressor is installed:
-# from llmcompressor import oneshot
-# from llmcompressor.modifiers.quantization import QuantizationModifier
-# from llmcompressor.utils import dispatch_for_generation
+from llmcompressor import oneshot
+from llmcompressor.modifiers.quantization import QuantizationModifier
+from llmcompressor.utils import dispatch_for_generation
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
 # Model configuration
-MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"  # Using a small model for testing
-OUTPUT_DIR = "./TinyLlama-1.1B-Custom-FP8"
+MODEL_ID = "/data0/models/QwQ-32B"  # Using a small model for testing
+OUTPUT_DIR = "/data0/models/QwQ-32B-hifloat8-quantized"
 
 # Quantization configuration
-CUSTOM_FORMAT = "e5m2"  # Your custom FP8 format identifier
+CUSTOM_FORMAT = "hifloat8"  # Your custom HiFloat8 format identifier
 QUANTIZE_WEIGHTS = True
 QUANTIZE_ACTIVATIONS = True
 
 # Device configuration
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+DEVICE = "npu:0" if torch.npu.is_available() else "cpu"
 
 # ============================================================================
 # STEP 1: LOAD MODEL AND TOKENIZER
@@ -64,24 +58,18 @@ print(f"✓ Model dtype: {model.dtype}")
 print(f"✓ Model device: {next(model.parameters()).device}")
 
 # ============================================================================
-# STEP 2: CONFIGURE CUSTOM FP8 QUANTIZATION
+# STEP 2: CONFIGURE HIFLOAT8 QUANTIZATION
 # ============================================================================
 
 print("\n" + "=" * 80)
-print("STEP 2: Configuring Custom FP8 Quantization")
+print("STEP 2: Configuring HiFloat8 Quantization")
 print("=" * 80)
 
-# Define which layers to ignore (typically embeddings, norms, and output heads)
+# Define which layers to ignore
 IGNORE_LAYERS = [
     "lm_head",              # Output projection
-    "model.norm",           # Final layer norm
-    "LlamaRotaryEmbedding", # Rotary embeddings
-    "LlamaRMSNorm",         # RMS normalization layers
-    "SiLU",                 # Activation functions
 ]
 
-# Uncomment when llmcompressor is installed:
-"""
 # Create the quantization recipe using Python API
 # This is equivalent to the YAML recipe but more flexible
 recipe = QuantizationModifier(
@@ -89,14 +77,14 @@ recipe = QuantizationModifier(
     scheme={
         "input_activations": {
             "num_bits": 8,
-            "type": "float",
-            "strategy": "tensor",      # Per-tensor quantization
-            "dynamic": True,           # Dynamic quantization (computed at runtime)
+            "type": "float",            # quantize to low-precision float
+            "strategy": "token",        # Per-token quantization, if supported
+            "dynamic": True,            # Dynamic quantization (computed at runtime)
             "custom_format": CUSTOM_FORMAT,  # Your custom format
         } if QUANTIZE_ACTIVATIONS else None,
         "weights": {
             "num_bits": 8,
-            "type": "float",
+            "type": "float",            # quantize to low-precision float
             "strategy": "channel",     # Per-channel quantization for weights
             "symmetric": True,         # Symmetric quantization
             "custom_format": CUSTOM_FORMAT,  # Your custom format
@@ -110,7 +98,7 @@ print(f"  - Target layers: Linear")
 print(f"  - Custom format: {CUSTOM_FORMAT}")
 print(f"  - Weight quantization: {QUANTIZE_WEIGHTS}")
 print(f"  - Activation quantization: {QUANTIZE_ACTIVATIONS}")
-print(f"  - Ignored layers: {len(IGNORE_LAYERS)}")
+print(f"  - Ignored layers: {IGNORE_LAYERS}")
 
 # ============================================================================
 # STEP 3: APPLY QUANTIZATION (PTQ - No Calibration Data Needed)
@@ -120,7 +108,7 @@ print("\n" + "=" * 80)
 print("STEP 3: Applying Quantization")
 print("=" * 80)
 
-# For simple PTQ with custom FP8, we don't need calibration data
+# For simple PTQ with HiFloat8, we don't need calibration data
 # The quantization is applied directly to the weights
 oneshot(
     model=model,
@@ -227,11 +215,4 @@ print(f"   model = LLM('{OUTPUT_DIR}')")
 print(f"2. Run inference:")
 print(f"   outputs = model.generate('Hello, world!')")
 print(f"3. Evaluate accuracy with lm-eval-harness")
-"""
 
-print("\n" + "=" * 80)
-print("NOTE: This example requires llmcompressor to be installed.")
-print("Please install it first:")
-print("  pip install llmcompressor")
-print("Then uncomment the code sections marked above.")
-print("=" * 80)
