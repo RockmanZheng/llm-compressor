@@ -1,0 +1,42 @@
+# Custom FP8 Quantization Recipe
+# ================================
+# This recipe defines the quantization scheme for custom FP8 format (E5M2)
+#
+# Usage:
+#   from llmcompressor import oneshot
+#   oneshot(
+#       model="meta-llama/Meta-Llama-3-8B-Instruct",
+#       recipe="custom_fp8_recipe.yaml",
+#       output_dir="./quantized_model"
+#   )
+
+quant_stage:
+  quant_modifiers:
+    QuantizationModifier:
+      # Layers to ignore during quantization
+      # These are typically embedding layers, normalization layers, and output heads
+      ignore:
+        - LlamaRotaryEmbedding
+        - LlamaRMSNorm
+        - SiLU
+        - model.norm
+        - lm_head
+      
+      # Quantization scheme
+      scheme:
+        # Activation quantization
+        input_activations:
+          num_bits: 8
+          type: float
+          strategy: tensor          # Per-tensor quantization for activations
+          dynamic: true             # Dynamic quantization (computed at runtime)
+          symmetric: false          # Asymmetric quantization for better accuracy
+          custom_format: e5m2       # Custom FP8 E5M2 format
+        
+        # Weight quantization
+        weights:
+          num_bits: 8
+          type: float
+          strategy: channel         # Per-channel quantization for weights
+          symmetric: true           # Symmetric quantization for weights
+          custom_format: e5m2       # Custom FP8 E5M2 format
